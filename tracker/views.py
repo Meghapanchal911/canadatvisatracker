@@ -1,4 +1,4 @@
-from rest_framework import generics
+from rest_framework import generics, status
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from django.db.models import Max
@@ -9,11 +9,15 @@ from .serializers import (
     ScrapeLogSerializer
 )
 
+# Valid country codes — basic validation
+def is_valid_country_code(code):
+    return code and len(code) == 2 and code.isalpha()
+
 
 class VisaTypeListView(generics.ListAPIView):
     """
     GET /api/visa-types/
-    Returns all 8 visa types.
+    Returns all visa types ordered by category then name.
     """
     queryset = VisaType.objects.all().order_by('category', 'name')
     serializer_class = VisaTypeSerializer
@@ -21,43 +25,55 @@ class VisaTypeListView(generics.ListAPIView):
 
 class SnapshotListView(generics.ListAPIView):
     """
-    GET /api/snapshots/?visa_code=study&country_code=IN
-    Returns processing time history for a specific visa type.
-    Both filters are optional.
+    GET /api/snapshots/?visa_code=study&country_code=IN&limit=90
+    Returns processing time history for a specific visa + country.
     """
     serializer_class = ProcessingSnapshotSerializer
 
     def get_queryset(self):
         queryset = ProcessingSnapshot.objects.all()
 
-        # Filter by visa code if provided in URL
         visa_code = self.request.query_params.get('visa_code')
         if visa_code:
+            # Validate visa code exists
+            if not VisaType.objects.filter(code=visa_code).exists():
+                return ProcessingSnapshot.objects.none()
             queryset = queryset.filter(visa_type__code=visa_code)
 
-        # Filter by country code if provided in URL
         country_code = self.request.query_params.get('country_code')
         if country_code:
-            queryset = queryset.filter(country_code=country_code)
+            if not is_valid_country_code(country_code):
+                return ProcessingSnapshot.objects.none()
+            queryset = queryset.filter(country_code=country_code.upper())
 
-        return queryset.order_by('-scraped_date')[:90]
-        # Limit to last 90 records to keep responses fast
+        # Configurable limit — default 90, max 365
+        try:
+            limit = min(int(self.request.query_params.get('limit', 90)), 365)
+        except ValueError:
+            limit = 90
+
+        return queryset.order_by('-scraped_date')[:limit]
 
 
 class TrendsView(APIView):
     """
-    GET /api/trends/
-    Returns each visa type with its most recent processing time
-    for a given country (default: IN for India).
+    GET /api/trends/?country_code=IN
+    Returns each visa type with its most recent processing time.
     """
     def get(self, request):
-        country_code = request.query_params.get('country_code', 'IN')
+        country_code = request.query_params.get('country_code', 'IN').upper()
 
-        visa_types = VisaType.objects.all()
+        # Validate country code
+        if not is_valid_country_code(country_code):
+            return Response(
+                {'error': 'Invalid country code. Must be a 2-letter code like IN, CA, US.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        visa_types = VisaType.objects.all().order_by('category', 'name')
         results = []
 
         for visa_type in visa_types:
-            # Get the most recent snapshot for this visa type and country
             latest = ProcessingSnapshot.objects.filter(
                 visa_type=visa_type,
                 country_code=country_code
@@ -78,8 +94,7 @@ class TrendsView(APIView):
 class LastUpdatedView(APIView):
     """
     GET /api/last-updated/
-    Returns the date of the most recent scrape.
-    Used by the frontend to show "Data last updated X"
+    Returns timestamp of the most recent successful scrape.
     """
     def get(self, request):
         latest_log = ScrapeLog.objects.filter(
@@ -88,8 +103,43 @@ class LastUpdatedView(APIView):
 
         if latest_log:
             return Response({
-                'last_updated': latest_log.run_at,
+                'last_updated':  latest_log.run_at,
                 'records_saved': latest_log.records_saved,
+                'status':        'ok'
             })
 
-        return Response({'last_updated': None, 'records_saved': 0})
+        return Response({
+            'last_updated':  None,
+            'records_saved': 0,
+            'status':        'no scrape run yet'
+        })
+
+
+class ScrapeLogListView(generics.ListAPIView):
+    """
+    GET /api/scrape-logs/
+    Returns the last 10 scrape logs for monitoring.
+    """
+    queryset = ScrapeLog.objects.all().order_by('-run_at')[:10]
+    serializer_class = ScrapeLogSerializer
+
+
+class StatsView(APIView):
+    """
+    GET /api/stats/
+    Returns summary statistics about the dataset.
+    Useful for the dashboard header and README.
+    """
+    def get(self, request):
+        total_snapshots = ProcessingSnapshot.objects.count()
+        total_visa_types = VisaType.objects.count()
+        total_countries = ProcessingSnapshot.objects.values('country_code').distinct().count()
+        latest_log = ScrapeLog.objects.filter(status='success').order_by('-run_at').first()
+
+        return Response({
+            'total_snapshots':  total_snapshots,
+            'total_visa_types': total_visa_types,
+            'total_countries':  total_countries,
+            'last_scraped':     latest_log.run_at if latest_log else None,
+            'status':           'ok'
+        })

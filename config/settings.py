@@ -1,15 +1,21 @@
 from pathlib import Path
+import os
+from dotenv import load_dotenv
+
+# Load .env file
+load_dotenv(os.path.join(Path(__file__).resolve().parent.parent, '.env'))
 
 # Base directory of the project
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# Secret key - loaded from .env file (never hardcode this)
-SECRET_KEY = 'django-insecure-canadavisatracker-dev-key-only'
+# Secret key - loaded from .env file.
+SECRET_KEY = os.environ.get('SECRET_KEY', 'fallback-insecure-key-for-dev-only')
 
 # Debug mode - True in development, False in production
-DEBUG = True
+DEBUG = os.environ.get('DEBUG', 'True') == 'True'
 
-ALLOWED_HOSTS = ['localhost', '127.0.0.1']
+
+ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
 
 # All the apps Django needs to know about
 INSTALLED_APPS = [
@@ -62,11 +68,11 @@ WSGI_APPLICATION = 'config.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'canadavisatracker',
-        'USER': 'cvtuser',
-        'PASSWORD': 'Megha911',
-        'HOST': 'localhost',
-        'PORT': '5432',
+        'NAME':     os.environ.get('DB_NAME', 'canadavisatracker'),
+        'USER':     os.environ.get('DB_USER', 'cvtuser'),
+        'PASSWORD': os.environ.get('DB_PASSWORD', ''),
+        'HOST':     os.environ.get('DB_HOST', 'localhost'),
+        'PORT':     os.environ.get('DB_PORT', '5432'),
     }
 }
 

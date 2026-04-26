@@ -19,5 +19,6 @@ from django.urls import path, include
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('api/', include('tracker.urls')),
+    path('api/v1/', include('tracker.urls')),  # versioned
+    path('api/', include('tracker.urls')),      # backwards compatible
 ]
