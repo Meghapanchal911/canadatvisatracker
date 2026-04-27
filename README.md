@@ -167,4 +167,5 @@ canadavisatracker/
 ## Author
 
 Megha Panchal — Masters in Software Engineering, University of Guelph
-[LinkedIn](https://linkedin.com/in/yourprofile) · [GitHub](https://github.com/Meghapanchal911)
+[LinkedIn](https://www.linkedin.com/in/megha-panchal-835101206) · 
+[GitHub](https://github.com/Meghapanchal911)
