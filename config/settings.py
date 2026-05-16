@@ -68,11 +68,14 @@ WSGI_APPLICATION = 'config.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME':     os.environ.get('DB_NAME', 'canadavisatracker'),
-        'USER':     os.environ.get('DB_USER', 'cvtuser'),
-        'PASSWORD': os.environ.get('DB_PASSWORD', ''),
-        'HOST':     os.environ.get('DB_HOST', 'localhost'),
-        'PORT':     os.environ.get('DB_PORT', '5432'),
+        'NAME': 'canadavisatracker',
+        'USER': 'cvtuser',
+        'PASSWORD': 'Panchal1182',
+        'HOST': 'canadavisatracker-db.cho0280gk9bz.ca-central-1.rds.amazonaws.com',
+        'PORT': '5432',
+        'OPTIONS': {
+            'sslmode': 'require',
+        }
     }
 }
 
