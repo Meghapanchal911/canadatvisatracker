@@ -100,6 +100,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # CORS - allows your React frontend on localhost:3000 to call this Django API
 CORS_ALLOWED_ORIGINS = [
     'http://localhost:3000',
+    'https://canadatvisatracker.vercel.app',
 ]
 
 # Django REST Framework settings
