@@ -6,7 +6,7 @@ import ComparisonBar from '../components/ComparisonBar'
 import VisaTable from '../components/VisaTable'
 import ErrorMessage from '../components/ErrorMessage'
 
-const API = 'http://35.183.144.113/api'
+const API = 'https://canadavisatracker.duckdns.org/api'
 
 const COUNTRIES = [
   { code: 'IN', label: 'India' },
